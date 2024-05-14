@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management System</title>
+    <style>
+        /* Some basic styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative; /* Add relative positioning for absolute positioning of the clock */
+        }
+        h1 {
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        input[type="text"], input[type="number"], select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        /* Style for the clock */
+        #clock {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Inventory Management System</h1>
+
+    <!-- Upload JSON file -->
+    <input type="file" id="fileInput">
+    <button onclick="handleFile()">Load Inventory</button>
+
+    <form id="inventoryForm">
+        <input type="text" id="itemName" placeholder="Item Name">
+        <input type="number" id="quantity" placeholder="Quantity">
+        <input type="text" id="category" placeholder="Category">
+        <select id="location">
+            <option value="" disabled selected>Select Location</option>
+            <option value="Warehouse A">Warehouse A</option>
+            <option value="Warehouse B">Warehouse B</option>
+            <option value="Storefront">Storefront</option>
+        </select>
+        <button type="button" onclick="addItem()">Add Item</button>
+    </form>
+
+    <table id="inventoryTable">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Quantity</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Inventory items will be added dynamically here -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Clock element -->
+<div id="clock"></div>
+
+<script>
+    let inventory = []; // Initialize inventory as empty array
+
+    // Function to render inventory items
+    function renderInventory() {
+        const tableBody = document.querySelector('#inventoryTable tbody');
+        tableBody.innerHTML = '';
+        inventory.forEach(item => {
+            const row = `<tr>
+                            <td>${item.itemName}</td>
+                            <td>${item.quantity}</td>
+                            <td>${item.category}</td>
+                            <td>${item.location}</td>
+                            <td><button onclick="deleteItem('${item.itemName}')">Delete</button></td>
+                        </tr>`;
+            tableBody.innerHTML += row;
+        });
+    }
+
+    // Function to add new item to inventory
+    function addItem() {
+        const itemName = document.querySelector('#itemName').value;
+        const quantity = parseInt(document.querySelector('#quantity').value);
+        const category = document.querySelector('#category').value;
+        const location = document.querySelector('#location').value;
+
+        if (itemName && quantity && category && location) {
+            const newItem = { itemName, quantity, category, location };
+            inventory.push(newItem);
+            renderInventory();
+            document.getElementById("inventoryForm").reset(); // Reset form fields
+            saveInventory(); // Save inventory to JSON file
+        } else {
+            alert("Please fill in all fields.");
+        }
+    }
+
+    // Function to delete item from inventory
+    function deleteItem(itemName) {
+        inventory = inventory.filter(item => item.itemName !== itemName);
+        renderInventory();
+        saveInventory(); // Save inventory to JSON file after deletion
+    }
+
+    // Function to save inventory to JSON file
+    function saveInventory() {
+        const jsonInventory = JSON.stringify(inventory);
+        const filename = `inventory_${new Date().toISOString().replace(/:/g, '-')}.json`;
+        downloadFile(jsonInventory, filename);
+    }
+
+    // Function to handle file upload
+    function handleFile() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const contents = event.target.result;
+            inventory = JSON.parse(contents);
+            renderInventory();
+        };
+        reader.readAsText(file);
+    }
+
+    // Function to download file
+    function downloadFile(data, filename) {
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }
+
+    // Function to fetch current time from an API
+    function fetchTime() {
+        fetch('http://worldclockapi.com/api/json/utc/now')
+            .then(response => response.json())
+            .then(data => {
+                const time = new Date(data.currentDateTime);
+                const formattedTime = time.toLocaleTimeString();
+                document.getElementById('clock').textContent = formattedTime;
+            })
+            .catch(error => console.error('Error fetching time:', error));
+    }
+
+    // Update the clock every second
+    setInterval(fetchTime, 1000);
+    // Fetch time initially when the page loads
+    fetchTime();
+
+</script>
+
+</body>
+</html>
